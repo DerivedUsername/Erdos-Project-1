@@ -1,9 +1,10 @@
-
 from math import pi
+
 from qiskit import QuantumCircuit
 from qiskit.synthesis import synth_qft_full
 
 from erdos_project_1.fourier_adder import phi_add
+
 
 def append_phi_add(
     qc: QuantumCircuit,
@@ -27,6 +28,8 @@ def append_phi_add(
             qc.mcp(theta, controls, target)
         else:
             raise ValueError("At most two controls are supported")
+
+
 def controlled_modular_add(a: int, N: int) -> QuantumCircuit:
     """
     Construct Beauregard's doubly controlled Fourier modular adder.

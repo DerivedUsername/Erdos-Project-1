@@ -1,4 +1,5 @@
 from math import gcd
+
 from qiskit import QuantumCircuit
 
 from erdos_project_1.controlled_multiplier import controlled_multiply

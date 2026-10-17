@@ -1,28 +1,48 @@
 import numpy as np
+import pytest
 from qiskit.quantum_info import Operator
 
 from erdos_project_1.fourier_adder import phi_add
 
 
-def test_phi_add():
-    m = 3
-    a = 2
-    dimension = 2**m
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("a", [-3, 0, 1, 2, 7])
+def test_phi_add(n: int, a: int):
+    """Verify Fourier addition against classical modular addition."""
+    m = n + 1
+    M = 2**m
 
-    # Independent Fourier matrix
-    x = np.arange(dimension)
-    F = np.exp(2j * np.pi * np.outer(x, x) / dimension)
-    F /= np.sqrt(dimension)
+    # Construct the QFT matrix independently
+    x = np.arange(M)
+    F = np.exp(2j * np.pi * np.outer(x, x) / M) / np.sqrt(M)
 
-    # Classical modular addition permutation matrix
-    T = np.zeros((dimension, dimension), dtype=complex)
+    # Construct classical modular addition as a permutation matrix
+    T = np.zeros((M, M), dtype=complex)
 
-    for b in range(dimension):
-        T[(b + a) % dimension, b] = 1
+    for b in range(M):
+        T[(a + b) % M, b] = 1
 
-    # Expected Fourier-basis addition
+    # Mathematical reference: A_a = F T_a F^{-1}
     expected = F @ T @ F.conj().T
 
+    # Actual circuit matrix
     actual = Operator(phi_add(a, m)).data
 
-    assert np.allclose(actual, expected, atol=1e-10)
+    # Compare complete unitaries, including phases
+    assert np.allclose(actual, expected, atol=1e-10, rtol=0)
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("a", [-3, 0, 1, 2, 7])
+def test_inverse_phi_add(n: int, a: int):
+    """Verify that subtraction by a undoes addition by a."""
+    m = n + 1
+    M = 2**m
+
+    adder = Operator(phi_add(a, m)).data
+    inverse = Operator(phi_add(-a, m)).data
+
+    # A_{-a} A_a = I
+    identity = np.eye(M, dtype=complex)
+
+    assert np.allclose(inverse @ adder, identity, atol=1e-10, rtol=0)

@@ -1,5 +1,7 @@
-from qiskit import QuantumCircuit
 from math import pi
+
+from qiskit import QuantumCircuit
+
 
 def phi_add(a: int, num_qubits: int) -> QuantumCircuit:
     """
