@@ -72,12 +72,53 @@ The environment is managed through `pyproject.toml` and `uv.lock`; do not instal
 
 ## Usage
 
+The function returns a Qiskit circuit, rather than an ordinary integer. This example prepares the input `y = 3`, applies multiplication by `a = 7` modulo `15`, and checks **both** control branches (`c = 0` leaves the input unchanged; `c = 1` produces `7 * 3 mod 15 = 6`). All work qubits start and end in `|0⟩`.
+
 ```python
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector
+
 from erdos_project_1.modular_multiplier import controlled_modular_multiply
 
-oracle = controlled_modular_multiply(a=7, N=15)
+a, N, y = 7, 15, 3
+oracle = controlled_modular_multiply(a=a, N=N)
 print(oracle.num_qubits)  # 12
+
+for control in (0, 1):
+    qc = QuantumCircuit(oracle.num_qubits)
+
+    # q[0] is the control; X changes |0> to |1> when enabled.
+    if control == 1:
+        qc.x(0)
+
+    # q[1:5] stores y in little-endian bit order.
+    for j in range(4):
+        if (y >> j) & 1:
+            qc.x(j + 1)
+
+    qc.compose(oracle, inplace=True)
+
+    # This circuit has a deterministic computational-basis output.
+    state = Statevector.from_instruction(qc)
+    index = max(range(len(state.data)), key=lambda i: abs(state.data[i]) ** 2)
+    output_y = (index >> 1) & 0b1111
+    work = index >> 5
+
+    expected = (a * y) % N if control else y
+    assert output_y == expected
+    assert work == 0
+    print(f"Control={control}: {y} -> {output_y}, work={work}")
 ```
+
+Expected output:
+
+```text
+12
+Control=0: 3 -> 3, work=0
+Control=1: 3 -> 6, work=0
+```
+
+This is an ideal **statevector simulation**, not execution on quantum hardware. The notebook and tests separately verify coherent superpositions and relative phases, which cannot be established from computational-basis examples alone.
 
 ### Register layout for `N = 15`
 
